@@ -6,7 +6,7 @@ import xgboost as xgb
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
-%matplotlib inline
+# %matplotlib inline
 import seaborn as sns
 import plotly.offline as py
 py.init_notebook_mode(connected=True)
@@ -28,7 +28,7 @@ test = pd.read_csv("./datasets/test.csv")
 # Store our passenger ID for easy access
 PassengerId = test["PassengerId"]
 
-print train_df.head()
+print train.head()
 
 full_data = [train, test]
 
@@ -85,7 +85,6 @@ for dataset in full_data:
 for dataset in full_data:
     # Mapping Sex
     dataset['Sex'] = dataset['Sex'].map( {'female': 0, 'male': 1} ).astype(int)
-    
     # Mapping titles
     title_mapping = {"Mr": 1, "Miss": 2, "Mrs": 3, "Master": 4, "Rare": 5}
     dataset['Title'] = dataset['Title'].map(title_mapping)
@@ -106,4 +105,49 @@ for dataset in full_data:
     dataset.loc[(dataset['Age'] > 16) & (dataset['Age'] <= 32), 'Age'] = 1
     dataset.loc[(dataset['Age'] > 32) & (dataset['Age'] <= 48), 'Age'] = 2
     dataset.loc[(dataset['Age'] > 48) & (dataset['Age'] <= 64), 'Age'] = 3
-    dataset.loc[ dataset['Age'] > 64, 'Age'] = 4 ;
+    dataset.loc[ dataset['Age'] > 64, 'Age'] = 4
+
+# Feature selection
+drop_elements = ['PassengerId', 'Name', 'Ticket', 'Cabin', 'SibSp']
+train = train.drop(drop_elements, axis = 1)
+train = train.drop(['CategoricalAge', 'CategoricalFare'], axis = 1)
+test  = test.drop(drop_elements, axis = 1)
+
+print train.head()
+
+colormap = plt.cm.RdBu
+plt.figure(figsize=(14,12))
+plt.title('Pearson Correlation of Features', y=1.05, size=15)
+sns.heatmap(train.astype(float).corr(),linewidths=0.1,vmax=1.0, 
+            square=True, cmap=colormap, linecolor='white', annot=True)
+
+g = sns.pairplot(train[[u'Survived', u'Pclass', u'Sex', u'Age', u'Parch', u'Fare', u'Embarked',
+       u'FamilySize', u'Title']], hue='Survived', palette = 'seismic',size=1.2,diag_kind = 'kde',diag_kws=dict(shade=True),plot_kws=dict(s=10) )
+g.set(xticklabels=[])
+
+# Some useful parameters which will come in handy later on
+ntrain = train.shape[0]
+ntest = test.shape[0]
+SEED = 0 # for reproducibility
+NFOLDS = 5 # set folds for out-of-fold prediction
+kf = KFold(ntrain, n_folds= NFOLDS, random_state=SEED)
+
+# Class to extend the Sklearn classifier
+class SklearnHelper(object):
+    def __init__(self, clf, seed=0, params=None):
+        params['random_state'] = seed
+        self.clf = clf(**params)
+
+    def train(self, x_train, y_train):
+        self.clf.fit(x_train, y_train)
+
+    def predict(self, x):
+        return self.clf.predict(x)
+    
+    def fit(self,x,y):
+        return self.clf.fit(x,y)
+    
+    def feature_importances(self,x,y):
+        print(self.clf.fit(x,y).feature_importances_)
+    
+# Class to extend XGboost classifer
