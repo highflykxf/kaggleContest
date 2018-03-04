@@ -1,6 +1,3 @@
-# Imports
-
-# pandas
 import pandas as pd
 from pandas import Series,DataFrame
 
@@ -21,8 +18,8 @@ from sklearn.naive_bayes import GaussianNB
 
 
 # get titanic & test csv files as a DataFrame
-titanic_df = pd.read_csv("../input/train.csv")
-test_df    = pd.read_csv("../input/test.csv")
+titanic_df = pd.read_csv("./datasets/train.csv")
+test_df    = pd.read_csv("./datasets/test.csv")
 
 # preview the data
 print(titanic_df.head())
